@@ -100,22 +100,7 @@ air.Graph = class {
                 continue;
             }
             if (op.type === 'Const' && op.attr && op.attr.value) {
-                const tensor = op.attr.value.t;
-                const desc = tensor.desc;
-                let data = null;
-                if (tensor.data.length !== 0) {
-                    data = tensor.data;
-                } else if (context.weights === null) {
-                    data = null;
-                } else if (desc.attr.merged_offset) {
-                    const offset = desc.attr.merged_offset.i.toNumber();
-                    data = context.weights.slice(offset, offset + desc.weight_size.toNumber());
-                } else {
-                    const offset = desc.data_offset.toNumber();
-                    data = context.weights.slice(offset, offset + desc.weight_size.toNumber());
-                }
-                const type = air.Utility.tensorType(desc);
-                const initializer = new air.Tensor('Constant', type, data, op.name, air.Utility.tensorAttributes(desc, context));
+                const initializer = air.Utility.createTensor(op.attr.value.t, context, op.name);
                 tensors.set(op.name, initializer);
                 continue;
             }
@@ -136,7 +121,9 @@ air.Graph = class {
         const outputs = Array.isArray(graph.output) && graph.output.length > 0 ? graph.output : netOutputs;
         for (let i = 0; i < outputs.length; i++) {
             const identifier = outputs[i];
-            const value = values.has(identifier) ? values.get(identifier) : values.map(identifier, null);
+            const tensor = air.Utility.tensor(identifier, tensors);
+            const type = tensor ? tensor.type : null;
+            const value = values.map(identifier, type, tensor);
             const name = i === 0 ? 'output' : `output${i}`;
             this.outputs.push(new air.Argument(name, [value]));
         }
@@ -287,7 +274,7 @@ air.Node = class {
                         value = list.td.map((td) => air.Utility.tensorDescriptor(td, context));
                         type = 'tensor[]';
                     } else if (list.t && list.t.length > 0) {
-                        value = list.t.map((tensor) => new air.Tensor('Constant', air.Utility.tensorType(tensor.desc), tensor.bytes));
+                        value = list.t.map((tensor) => air.Utility.createTensor(tensor, context));
                         type = 'tensor[]';
                     } else if (list.g && list.g.length > 0) {
                         value = list.g.map((graph) => new air.Graph(context, graph));
@@ -322,7 +309,7 @@ air.Node = class {
                 }
                 case 't': {
                     type = 'tensor';
-                    value = new air.Tensor('Constant', air.Utility.tensorType(obj.t.desc), obj.t.bytes, '', air.Utility.tensorAttributes(obj.t.desc, context));
+                    value = air.Utility.createTensor(obj.t, context);
                     break;
                 }
                 case undefined: {
@@ -462,7 +449,7 @@ air.Utility = class {
             const sibling = name === 'origin_format_for_int' ? attributes.origin_format : attributes.format;
             let format = null;
             if (sibling && sibling.value === 's' && sibling.s && sibling.s.length > 0) {
-                format = air.Utility.decodeText(sibling.s);
+                format = air.Utility.decodeBytes(sibling.s);
             }
             format = format || air.Utility.dataFormat(intValue);
             if (format) {
@@ -534,7 +521,7 @@ air.Utility = class {
             value.has_out_attr = desc.has_out_attr;
         }
         if (desc.attr && Object.keys(desc.attr).length > 0) {
-            value.attr = Object.fromEntries(Object.entries(desc.attr).map(([name, attr]) => [name, air.Utility.attributeValue(attr, context)]));
+            value.attr = Object.fromEntries(air.Utility.tensorAttributes(desc, context).map((attribute) => [attribute.name, attribute.value]));
         }
         return value;
     }
@@ -577,7 +564,7 @@ air.Utility = class {
             case 'td':
                 return air.Utility.tensorDescriptor(obj.td, context);
             case 't':
-                return new air.Tensor('Constant', air.Utility.tensorType(obj.t.desc), obj.t.bytes);
+                return air.Utility.createTensor(obj.t, context);
             case 'list':
                 return air.Utility.listValue(obj.list, context);
             case 'list_list_int':
@@ -585,7 +572,7 @@ air.Utility = class {
             case 'list_list_float':
                 return obj.list_list_float.list_list_f.map((list) => list.list_f);
             default:
-                return air.Utility.rawObject(obj, context);
+                return air.Utility.rawAttributeValue(obj, context);
         }
     }
 
@@ -612,7 +599,7 @@ air.Utility = class {
             return list.td.map((td) => air.Utility.tensorDescriptor(td, context));
         }
         if (list.t && list.t.length > 0) {
-            return list.t.map((tensor) => new air.Tensor('Constant', air.Utility.tensorType(tensor.desc), tensor.bytes, '', air.Utility.tensorAttributes(tensor.desc, context)));
+            return list.t.map((tensor) => air.Utility.createTensor(tensor, context));
         }
         if (list.g && list.g.length > 0) {
             return list.g.map((graph) => new air.Graph(context, graph));
@@ -636,10 +623,51 @@ air.Utility = class {
         if (typeof value === 'string') {
             return value;
         }
-        if (Array.isArray(value) && value.every((c) => c >= 32 && c <= 128)) {
-            return air.Utility.decodeText(value);
+        if (Array.isArray(value) || value instanceof Uint8Array) {
+            const buffer = value instanceof Uint8Array ? value : new Uint8Array(value);
+            if (buffer.every((c) => c >= 32 && c <= 128)) {
+                return air.Utility.decodeText(buffer);
+            }
         }
         return value;
+    }
+
+    static tensor(identifier, tensors) {
+        const index = identifier.lastIndexOf(':');
+        const name = index === -1 ? identifier : identifier.substring(0, index);
+        return tensors.get(name) || null;
+    }
+
+    static tensorData(tensor, context) {
+        const desc = tensor.desc;
+        if (tensor.data.length !== 0) {
+            return tensor.data;
+        }
+        if (context.weights === null) {
+            return null;
+        }
+        if (desc.attr.merged_offset) {
+            const offset = desc.attr.merged_offset.i.toNumber();
+            return context.weights.slice(offset, offset + desc.weight_size.toNumber());
+        }
+        const offset = desc.data_offset.toNumber();
+        return context.weights.slice(offset, offset + desc.weight_size.toNumber());
+    }
+
+    static createTensor(tensor, context, name = '') {
+        return new air.Tensor(
+            'Constant',
+            air.Utility.tensorType(tensor.desc),
+            air.Utility.tensorData(tensor, context),
+            name,
+            air.Utility.tensorAttributes(tensor.desc, context)
+        );
+    }
+
+    static rawAttributeValue(obj, context) {
+        return Object.fromEntries(Object.entries(obj)
+            .filter(([name, value]) => name !== 'value' && value !== null && value !== undefined)
+            .map(([name, value]) => [name, air.Utility.rawObject(value, context)]));
     }
 
     static rawObject(obj, context) {
@@ -653,7 +681,7 @@ air.Utility = class {
             return air.Utility.decodeBytes(obj);
         }
         if (obj.value !== undefined) {
-            return air.Utility.attributeValue({ ...obj }, context);
+            return air.Utility.rawAttributeValue(obj, context);
         }
         return Object.fromEntries(Object.entries(obj)
             .filter(([, value]) => value !== null && value !== undefined)
