@@ -227,13 +227,7 @@ air.Node = class {
                     break;
                 }
                 case 's': {
-                    if (typeof obj.s === 'string') {
-                        value = obj.s;
-                    } else if (obj.s.every((c) => c >= 32 && c <= 128)) {
-                        value = air.Utility.decodeText(obj.s);
-                    } else {
-                        value = obj.s;
-                    }
+                    value = air.Utility.decodeBytes(obj.s);
                     type = 'string';
                     break;
                 }
@@ -256,7 +250,7 @@ air.Node = class {
                     const list = obj.list;
                     value = [];
                     if (list.s && list.s.length > 0) {
-                        value = list.s.map((v) => String.fromCharCode.apply(null, new Uint16Array(v))).join(', ');
+                        value = list.s.map((item) => air.Utility.decodeBytes(item)).join(', ');
                         type = 'string[]';
                     } else if (list.b && list.b.length > 0) {
                         value = list.b;
@@ -433,6 +427,21 @@ air.Utility = class {
     static decodeText(value) {
         air.Utility._textDecoder = air.Utility._textDecoder || new TextDecoder('utf-8');
         return air.Utility._textDecoder.decode(value);
+    }
+
+    static decodeUtf8(value) {
+        air.Utility._utf8Decoder = air.Utility._utf8Decoder || new TextDecoder('utf-8', { fatal: true });
+        return air.Utility._utf8Decoder.decode(value);
+    }
+
+    static hasControlCharacters(value) {
+        for (const char of value) {
+            const code = char.charCodeAt(0);
+            if ((code >= 0 && code <= 8) || (code >= 11 && code <= 12) || (code >= 14 && code <= 31) || code === 127) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static tensorAttributes(desc, context) {
@@ -625,8 +634,13 @@ air.Utility = class {
         }
         if (Array.isArray(value) || value instanceof Uint8Array) {
             const buffer = value instanceof Uint8Array ? value : new Uint8Array(value);
-            if (buffer.every((c) => c >= 32 && c <= 128)) {
-                return air.Utility.decodeText(buffer);
+            try {
+                const text = air.Utility.decodeUtf8(buffer);
+                if (!air.Utility.hasControlCharacters(text)) {
+                    return text;
+                }
+            } catch {
+                // continue regardless of error
             }
         }
         return value;
