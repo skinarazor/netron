@@ -712,3 +712,6 @@ air.Error = class extends Error {
 };
 
 export const ModelFactory = air.ModelFactory;
+export const Model = air.Model;
+export const Graph = air.Graph;
+export const Utility = air.Utility;

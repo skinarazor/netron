@@ -517,6 +517,7 @@ const lint = async () => {
 };
 
 const test = async (target) => {
+    await exec('node test/air.js');
     let models = true;
     while (true) {
         /* eslint-disable no-await-in-loop */
@@ -684,7 +685,8 @@ const coverage = async () => {
         case 'test': {
             const target = args.join(' ');
             await rm('dist', 'c8');
-            await exec(`npx c8 --reporter=html --report-dir=dist/c8/report node test/models.js ${target}`);
+            await exec('npx c8 --reporter=html --report-dir=dist/c8/report node test/air.js');
+            await exec(`npx c8 --reporter=html --report-dir=dist/c8/report --no-clean node test/models.js ${target}`);
             break;
         }
         default: {

@@ -260,6 +260,20 @@
     "link":     "https://github.com/lutzroeder/netron/issues/515"
   },
   {
+    "type":     "air",
+    "target":   "export.air",
+    "source":   "https://raw.githubusercontent.com/skinarazor/my-first-repo/main/mul_add.air",
+    "format":   "Ascend AIR",
+    "assert": [
+      "model.modules.length == 1",
+      "model.modules[0].nodes.length == 9",
+      "model.modules[0].inputs.length == 2",
+      "model.modules[0].outputs.length == 1",
+      "model.modules[0].nodes[0].type.name == 'Transpose'",
+      "model.modules[0].outputs[0].value[0].name == 'Add_2:0'"
+    ]
+  },
+  {
     "type":     "barracuda",
     "target":   "3DBallHardLearning.nn",
     "source":   "https://raw.githubusercontent.com/reinforcement-learning-kr/rl_bootcamp/master/UnitySDK/Assets/ML-Agents/Examples/3DBall/TFModels/3DBallHardLearning.nn",
