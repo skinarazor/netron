@@ -1407,6 +1407,21 @@
     ]
   },
   {
+    "name": "MatMulV2",
+    "inputs": [
+      { "name": "x1" },
+      { "name": "x2" },
+      { "name": "bias" }
+    ],
+    "outputs": [
+      { "name": "y" }
+    ],
+    "attributes": [
+      { "name": "transpose_x1" },
+      { "name": "transpose_x2" }
+    ]
+  },
+  {
     "name": "Maximum",
     "inputs": [
       { "name": "x1" },
@@ -2160,6 +2175,19 @@
       { "name": "y" }
     ],
     "attributes": [
+      { "name": "keep_dims" }
+    ]
+  },
+  {
+    "name": "ReduceMeanD",
+    "inputs": [
+      { "name": "x" }
+    ],
+    "outputs": [
+      { "name": "y" }
+    ],
+    "attributes": [
+      { "name": "axes" },
       { "name": "keep_dims" }
     ]
   },

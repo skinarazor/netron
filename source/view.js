@@ -7172,6 +7172,7 @@ view.ModelFactoryService = class {
         this.register('./acuity', ['.json']);
         this.register('./imgdnn', ['.dnn', 'params', '.json']);
         this.register('./flax', ['.msgpack']);
+        this.register('./air', ['.air']);
         this.register('./om', ['.om', '.onnx', '.pb', '.engine', '.bin'], [], [/^IMOD/, /^PICO/]);
         this.register('./gguf', ['.gguf', /^[^.]+$/], [], [/^GGUF/]);
         this.register('./nnabla', ['.nntxt'], ['.nnp']);

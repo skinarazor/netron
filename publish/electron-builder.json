@@ -4,6 +4,7 @@
     "files": [ "source/**/*" ],
     "directories": { "buildResources": "./publish" },
     "fileAssociations": [
+        { "ext": "air",          "name": "Ascend AIR Model"         },
         { "ext": "armnn",        "name": "Arm NN Model"             },
         { "ext": "caffemodel",   "name": "Caffe Model"              },
         { "ext": "circle",       "name": "Circle Model"             },
