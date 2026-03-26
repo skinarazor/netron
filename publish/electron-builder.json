@@ -4,7 +4,6 @@
     "files": [ "source/**/*" ],
     "directories": { "buildResources": "./publish" },
     "fileAssociations": [
-        { "ext": "air",          "name": "Ascend AIR Model"         },
         { "ext": "armnn",        "name": "Arm NN Model"             },
         { "ext": "caffemodel",   "name": "Caffe Model"              },
         { "ext": "circle",       "name": "Circle Model"             },
@@ -42,6 +41,7 @@
         { "ext": "nnp",          "name": "Neural Network Libraries" },
         { "ext": "npy",          "name": "NumPy Array"              },
         { "ext": "npz",          "name": "NumPy Archive"            },
+        { "ext": "air",          "name": "Ascend AIR Model"         },
         { "ext": "om",           "name": "DaVinci OM Model"         },
         { "ext": "onnx",         "name": "ONNX Model"               },
         { "ext": "ort",          "name": "ONNX Runtime Model"       },

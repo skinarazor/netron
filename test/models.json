@@ -261,7 +261,7 @@
   },
   {
     "type":     "air",
-    "target":   "export.air",
+    "target":   "mul_add.air",
     "source":   "https://raw.githubusercontent.com/skinarazor/my-first-repo/main/mul_add.air",
     "format":   "Ascend AIR",
     "assert": [
